@@ -132,26 +132,29 @@
           }
         });
 
-        AFRAME.registerComponent('follow-position', {
-          schema: { target: {type: 'selector'} },
-          tick: function () {
-            if (!this.data.target) return;
-            const targetPos = this.data.target.object3D.position;
-            this.el.object3D.position.copy(targetPos);
-          }
-        });
-
-        AFRAME.registerComponent('camera-limit', {
-          schema: { limit: {type: 'number', default: 95} },
+        AFRAME.registerComponent('camera-lock', {
+          schema: { 
+            limit: {type: 'number', default: 95},
+            lockVertical: {type: 'boolean', default: true}
+          },
           tick: function () {
             const rot = this.el.getAttribute('rotation');
+            let changed = false;
+            
+            if (this.data.lockVertical && rot.x !== 0) {
+              rot.x = 0;
+              changed = true;
+            }
+            
             if (rot.y > this.data.limit) {
               rot.y = this.data.limit;
-              this.el.setAttribute('rotation', rot);
+              changed = true;
             } else if (rot.y < -this.data.limit) {
               rot.y = -this.data.limit;
-              this.el.setAttribute('rotation', rot);
+              changed = true;
             }
+            
+            if (changed) this.el.setAttribute('rotation', rot);
           }
         });
       }
@@ -213,7 +216,7 @@
     >
       <a-assets id="gallery-assets"></a-assets>
 
-      <a-camera id="main-camera" camera-limit="limit: 100" position="0 1.6 0" look-controls="pointerLockEnabled: false; touchEnabled: true;" wasd-controls="enabled: false">
+      <a-camera id="main-camera" camera-lock="limit: 80" position="0 1.6 0" look-controls="pointerLockEnabled: false; touchEnabled: true;" wasd-controls="enabled: false">
         <a-cursor 
           color="#FFD700" 
           animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150"
@@ -221,7 +224,7 @@
         ></a-cursor>
       </a-camera>
 
-      <a-entity id="gallery-container" follow-position="#main-camera" position="0 1.6 0"></a-entity>
+      <a-entity id="gallery-container" position="0 0 0"></a-entity>
 
       <a-light type="ambient" intensity="0.8"></a-light>
       <a-light type="directional" position="1 5 2" intensity="0.6"></a-light>
@@ -405,10 +408,10 @@
         let holes = '';
         for (let i = 0; i < 6; i++) {
           const hX = -frameW / 2 + (i + 0.5) * (frameW / 6);
-          // Top row holes
-          holes += `<a-plane position="${hX} ${frameH/2 - 0.08} 0.005" width="0.1" height="0.06" color="#ffffff" material="opacity: 0.9"></a-plane>`;
+          // Top row holes - darker to look like punch-outs
+          holes += `<a-plane position="${hX} ${frameH/2 - 0.08} 0.026" width="0.1" height="0.08" color="#050505" material="opacity: 1; roughness: 1"></a-plane>`;
           // Bottom row holes
-          holes += `<a-plane position="${hX} ${-frameH/2 + 0.08} 0.005" width="0.1" height="0.06" color="#ffffff" material="opacity: 0.9"></a-plane>`;
+          holes += `<a-plane position="${hX} ${-frameH/2 + 0.08} 0.026" width="0.1" height="0.08" color="#050505" material="opacity: 1; roughness: 1"></a-plane>`;
         }
 
         entity.innerHTML = `
