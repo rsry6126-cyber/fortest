@@ -138,23 +138,23 @@
             lockVertical: {type: 'boolean', default: true}
           },
           tick: function () {
-            const rot = this.el.getAttribute('rotation');
-            let changed = false;
+            const rotation = this.el.object3D.rotation;
             
-            if (this.data.lockVertical && rot.x !== 0) {
-              rot.x = 0;
-              changed = true;
+            // Strictly lock vertical tilt (X-axis)
+            if (this.data.lockVertical) {
+              rotation.x = 0;
             }
             
-            if (rot.y > this.data.limit) {
-              rot.y = this.data.limit;
-              changed = true;
-            } else if (rot.y < -this.data.limit) {
-              rot.y = -this.data.limit;
-              changed = true;
+            // Enforce horizontal pan limits (Y-axis)
+            const limitRad = this.data.limit * (Math.PI / 180);
+            if (rotation.y > limitRad) {
+              rotation.y = limitRad;
+            } else if (rotation.y < -limitRad) {
+              rotation.y = -limitRad;
             }
             
-            if (changed) this.el.setAttribute('rotation', rot);
+            // Ensure Z-axis (roll) is always 0
+            rotation.z = 0;
           }
         });
       }
@@ -216,7 +216,7 @@
     >
       <a-assets id="gallery-assets"></a-assets>
 
-      <a-camera id="main-camera" camera-lock="limit: 80" position="0 1.6 0" look-controls="pointerLockEnabled: false; touchEnabled: true;" wasd-controls="enabled: false">
+      <a-camera id="main-camera" camera-lock="limit: 85" position="0 1.6 0" look-controls="pointerLockEnabled: false; touchEnabled: true;" wasd-controls="enabled: false">
         <a-cursor 
           color="#FFD700" 
           animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150"
@@ -232,8 +232,8 @@
       <a-plane id="floor" rotation="-90 0 0" width="50" height="50" color="#050505" material="roughness: 0.8; metalness: 0.2"></a-plane>
       
       <!-- Subtle Backdrop Wall to ground the gallery -->
-      <a-entity position="0 2 -6" rotation="0 0 0">
-        <a-plane width="15" height="8" color="#0a0a0a" material="opacity: 0.5; transparent: true; roughness: 1"></a-plane>
+      <a-entity position="0 1.6 -6" rotation="0 0 0">
+        <a-plane width="20" height="10" color="#0a0a0a" material="opacity: 0.5; transparent: true; roughness: 1"></a-plane>
       </a-entity>
 
       <a-sky id="sky" color="#000"></a-sky>
@@ -250,8 +250,8 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>
           </div>
           <div>
-            <h1 class="text-white text-lg font-display font-semibold tracking-tight leading-tight">AR GALLERY</h1>
-            <p class="text-white/40 text-[10px] uppercase tracking-[0.2em] font-medium">Exhibit 2026</p>
+            <h1 class="text-white text-lg font-display font-semibold tracking-tight leading-tight uppercase tracking-widest">Exhibit Beta</h1>
+            <p class="text-white/40 text-[10px] uppercase tracking-[0.2em] font-medium">Pan-Only Experience</p>
           </div>
         </div>
         
@@ -326,8 +326,8 @@
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>
         </div>
         
-        <h2 class="text-white text-5xl font-serif italic font-semibold mb-4 tracking-tight">STF Photo</h2>
-        <p class="text-white/40 font-display text-[10px] uppercase tracking-[0.4em] mb-10">AR Experience</p>
+        <h2 class="text-white text-5xl font-serif italic font-semibold mb-4 tracking-tight uppercase tracking-tighter">Test Reel</h2>
+        <p class="text-white/40 font-display text-[10px] uppercase tracking-[0.4em] mb-10">Limited Panning Experience</p>
         
         <div class="glass-light p-8 rounded-[2rem] mb-10 text-left relative overflow-hidden">
           <h4 class="text-white/80 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -342,11 +342,11 @@
         <div class="space-y-4 mb-12">
           <div class="flex items-center gap-4 text-left glass-light px-6 py-4 rounded-2xl border-white/5">
             <div class="w-6 h-6 rounded-full bg-white/5 flex-shrink-0 flex items-center justify-center text-[10px] font-bold border border-white/10">1</div>
-            <p class="text-white/60 text-[11px] font-medium tracking-wide">Explore the space using your device.</p>
+            <p class="text-white/60 text-[11px] font-medium tracking-wide">Swipe left or right to move along the reel.</p>
           </div>
           <div class="flex items-center gap-4 text-left glass-light px-6 py-4 rounded-2xl border-white/5">
             <div class="w-6 h-6 rounded-full bg-white/5 flex-shrink-0 flex items-center justify-center text-[10px] font-bold border border-white/10">2</div>
-            <p class="text-white/60 text-[11px] font-medium tracking-wide">Focus on any artwork to reveal its story.</p>
+            <p class="text-white/60 text-[11px] font-medium tracking-wide">Vertical tilt is disabled for stability.</p>
           </div>
         </div>
 
@@ -375,7 +375,7 @@
       // Layout Configuration
       const totalSpan = 140; // Degrees
       const radius = 5.5;    // Distance from center
-      const yLevel = 1.3;    // Height level
+      const yLevel = 1.6;    // Eye level for better viewing
 
       // Initialize Items
       GALLERY_DATA.forEach((item, index) => {
@@ -443,7 +443,6 @@
           // Update A-Frame elements
           const canvas = document.getElementById(`canvas-${item.id}`);
           const bg = document.getElementById(`frame-bg-${item.id}`);
-          const border = document.getElementById(`frame-border-${item.id}`);
           
           if (canvas) {
             canvas.setAttribute('width', finalW);
@@ -453,8 +452,6 @@
             bg.setAttribute('width', finalW + 0.2);
             bg.setAttribute('height', finalH + 0.4);
           }
-          // Note: sprocket holes remain at their initial relative positions
-          // which fits well as long as pictures aren't extremely narrow.
           
           console.log(`Adjusted Item ${item.id}: Ratio ${ratio.toFixed(2)} -> Size ${finalW.toFixed(2)}x${finalH.toFixed(2)}`);
         };
