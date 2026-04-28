@@ -399,20 +399,20 @@
 
         entity.innerHTML = `
           <!-- Main Strip Background -->
-          <a-box id="frame-bg-${item.id}" position="0 0 -0.06" width="${baseW + 0.2}" height="${baseH + stripExtension * 2}" depth="0.06" color="#111" material="roughness: 1; metalness: 0"></a-box>
+          <a-box id="frame-bg-${item.id}" position="0 0 -0.08" width="${baseW + 0.2}" height="${baseH + stripExtension * 2}" depth="0.06" color="#111" material="roughness: 1; metalness: 0"></a-box>
           
           <!-- Glossy Border -->
-          <a-box id="frame-border-${item.id}" position="0 0 -0.02" width="${baseW + 0.08}" height="${baseH + 0.08}" depth="0.04" color="#222" material="roughness: 0.2; metalness: 0.8"></a-box>
+          <a-box id="frame-border-${item.id}" position="0 0 -0.04" width="${baseW + 0.08}" height="${baseH + 0.08}" depth="0.04" color="#222" material="roughness: 0.2; metalness: 0.8"></a-box>
           
           <!-- Film Holes -->
-          <a-entity id="holes-top-${item.id}">${holesTop}</a-entity>
-          <a-entity id="holes-bottom-${item.id}">${holesBottom}</a-entity>
+          <a-entity id="holes-top-${item.id}" position="0 0 0.005">${holesTop}</a-entity>
+          <a-entity id="holes-bottom-${item.id}" position="0 0 0.005">${holesBottom}</a-entity>
 
-          <!-- Artwork -->
-          <a-image id="canvas-${item.id}" src="#img-${item.id}" width="${baseW}" height="${baseH}" class="clickable" gallery-item="id: ${item.id}"></a-image>
+          <!-- Artwork (Moved slightly forward to 0.01 to stop blinking) -->
+          <a-image id="canvas-${item.id}" src="#img-${item.id}" position="0 0 0.01" width="${baseW}" height="${baseH}" class="clickable" gallery-item="id: ${item.id}"></a-image>
           
           <!-- Label / Index -->
-          <a-text value="FRAME ${item.id.toString().padStart(2, '0')}" position="${-(baseW/2)} ${-(baseH/2 + 0.35)} 0.01" scale="0.4 0.4 0.4" font="monoid" color="#444"></a-text>
+          <a-text value="FRAME ${item.id.toString().padStart(2, '0')}" position="${-(baseW/2)} ${-(baseH/2 + 0.35)} 0.02" scale="0.4 0.4 0.4" font="monoid" color="#666"></a-text>
         `;
 
         container.appendChild(entity);
