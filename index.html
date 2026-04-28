@@ -90,8 +90,6 @@
         AFRAME.registerComponent('gallery-item', {
           schema: { id: {type: 'number'} },
           init: function () {
-            this.glow = this.el.querySelector('.glow-aura');
-
             this.el.addEventListener('click', () => {
               const item = GALLERY_DATA.find(d => d.id === this.data.id);
               window.showInfoCard(item);
@@ -100,8 +98,6 @@
             this.el.addEventListener('mouseenter', () => {
               const item = GALLERY_DATA.find(d => d.id === this.data.id);
               window.showInfoCard(item);
-
-              if (this.glow) this.glow.setAttribute('visible', 'true');
 
               this.el.setAttribute('animation__scale', {
                 property: 'scale',
@@ -112,8 +108,6 @@
             });
             
             this.el.addEventListener('mouseleave', () => {
-              if (this.glow) this.glow.setAttribute('visible', 'false');
-
               this.el.setAttribute('animation__scale', {
                 property: 'scale',
                 to: '1 1 1',
@@ -233,9 +227,6 @@
       <a-light type="ambient" intensity="0.8"></a-light>
       <a-light type="directional" position="1 5 2" intensity="0.6"></a-light>
       
-      <!-- Atmospheric Effects -->
-      <a-entity id="particles"></a-entity>
-      
       <a-plane id="floor" rotation="-90 0 0" width="50" height="50" color="#050505" material="roughness: 0.8; metalness: 0.2"></a-plane>
       
       <!-- Subtle Backdrop Wall to ground the gallery -->
@@ -322,12 +313,7 @@
     </div>
 
     <!-- Instructions Modal -->
-    <div id="instructions-modal" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xl transition-opacity duration-700 flex items-center justify-center p-8 text-center">
-      <div class="absolute inset-0 opacity-20 overflow-hidden pointer-events-none">
-        <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/30 rounded-full blur-[120px] animate-pulse-soft"></div>
-        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] animate-pulse-soft" style="animation-delay: -4s"></div>
-      </div>
-
+    <div id="instructions-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md transition-opacity duration-700 flex items-center justify-center p-8 text-center">
       <div class="max-w-md relative">
         <div class="w-20 h-20 mx-auto mb-8 rounded-3xl bg-white/5 flex items-center justify-center border border-white/10">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>
@@ -426,9 +412,6 @@
         }
 
         entity.innerHTML = `
-          <!-- Hover Glow Atmosphere -->
-          <a-plane class="glow-aura" position="0 0 -0.12" width="${baseW * 1.4}" height="${baseH * 1.8}" material="shader: flat; color: #FFD700; opacity: 0.15; transparent: true; blending: additive" visible="false"></a-plane>
-
           <!-- Main Strip Background -->
           <a-box id="frame-bg-${item.id}" position="0 0 -0.08" width="${baseW + 0.2}" height="${baseH + stripExtension * 2}" depth="0.06" color="#111" material="roughness: 1; metalness: 0"></a-box>
           
@@ -487,33 +470,6 @@
           console.log(`Adjusted Item ${item.id}: Ratio ${ratio.toFixed(2)} -> Size ${finalW.toFixed(2)}x${finalH.toFixed(2)}`);
         };
       });
-
-      // Atmospheric Particles Generation
-      const particleContainer = document.getElementById('particles');
-      for (let i = 0; i < 60; i++) {
-        const p = document.createElement('a-sphere');
-        const px = (Math.random() - 0.5) * 15;
-        const py = (Math.random() - 0.2) * 8;
-        const pz = (Math.random() - 0.5) * 15;
-        const size = Math.random() * 0.02 + 0.005;
-        
-        p.setAttribute('position', `${px} ${py} ${pz}`);
-        p.setAttribute('radius', size);
-        p.setAttribute('color', i % 2 === 0 ? '#FFD700' : '#FFF');
-        p.setAttribute('material', 'opacity: 0.4; transparent: true; shader: flat');
-        
-        // Drift animation
-        p.setAttribute('animation__drift', {
-          property: 'position',
-          to: `${px + (Math.random()-0.5)*2} ${py + Math.random()*2} ${pz + (Math.random()-0.5)*2}`,
-          dur: 15000 + Math.random() * 20000,
-          loop: true,
-          dir: 'alternate',
-          easing: 'easeInOutSine'
-        });
-        
-        particleContainer.appendChild(p);
-      }
 
       // AR Visibility
       const scene = document.querySelector('a-scene');
