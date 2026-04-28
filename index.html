@@ -354,23 +354,11 @@
       const noteDisplay = document.getElementById('curator-note-display');
       if (noteDisplay) noteDisplay.innerText = `"${CURATOR_NOTE}"`;
 
-      // Initialize Groups
-      const groupEntities = [];
-      const numGroups = 3;
-      const groupRadius = 4.8; // Adjusted distance for better viewing without overlap
-      const totalGroupSpan = 85; // Increased span to separate groups
-      
-      for (let g = 0; g < numGroups; g++) {
-        const groupAngle = -(totalGroupSpan / 2) + (g * (totalGroupSpan / (numGroups - 1)));
-        const gx = Math.sin(groupAngle * (Math.PI / 180)) * groupRadius;
-        const gz = -Math.cos(groupAngle * (Math.PI / 180)) * groupRadius;
-        
-        const groupEl = document.createElement('a-entity');
-        groupEl.setAttribute('position', `${gx} 0 ${gz}`); 
-        groupEl.setAttribute('rotation', `0 ${-groupAngle} 0`);
-        container.appendChild(groupEl);
-        groupEntities.push(groupEl);
-      }
+      // Enhanced Filmstrip Configuration
+      const totalItems = GALLERY_DATA.length;
+      const arcPadding = 26; // Degrees between items
+      const radius = 5.8;    // Slightly further away for better panoramas
+      const galleryY = 1.6;  // Eye level height
 
       // Initialize Items
       GALLERY_DATA.forEach((item, index) => {
@@ -382,34 +370,52 @@
         img.referrerPolicy = "no-referrer";
         assets.appendChild(img);
 
-        // 2. Group Position Logic (3 groups of 3: 1 parent above, 2 children below)
-        const groupIndex = Math.floor(index / 3);
-        const itemInGroup = index % 3; // 0=Parent, 1=ChildL, 2=ChildR
-        const groupEntity = groupEntities[groupIndex];
-
-        let localX = 0, localY = 0;
-        if (itemInGroup === 0) {
-          localY = 0.65; // Parent
-          localX = 0;
-        } else {
-          localY = -0.45; // Children
-          localX = itemInGroup === 1 ? -0.95 : 0.95; // Closer internal spacing
-        }
+        // 2. Single Row Positioning Logic
+        // Centering the arc: (index - (total-1)/2)
+        const angle = (index - (totalItems - 1) / 2) * arcPadding;
+        const rad = angle * (Math.PI / 180);
+        
+        let posX = Math.sin(rad) * radius;
+        let posZ = -Math.cos(rad) * radius;
         
         const entity = document.createElement('a-entity');
-        entity.setAttribute('position', `${localX} ${localY} 0`);
+        entity.setAttribute('position', `${posX} ${galleryY} ${posZ}`);
+        entity.setAttribute('rotation', `0 ${-angle} 0`);
 
-        // 3. Create the Frame & Canvas (Landscape friendly)
+        // 3. Create the Filmstrip Frame & Canvas
         const baseH = 1.0; 
         const baseW = 1.6;
+        const stripExtension = 0.25; // Extra height for the strip edges
+
+        // Generate holes for the filmstrip effect
+        let holesTop = '';
+        let holesBottom = '';
+        const numHoles = 6;
+        for(let i=0; i<numHoles; i++) {
+          const xPos = -(baseW/2) + (i * (baseW/(numHoles-1)));
+          holesTop += `<a-plane position="${xPos} ${baseH/2 + 0.12} 0.001" width="0.08" height="0.1" color="#eee" material="opacity: 0.9; shader: flat"></a-plane>`;
+          holesBottom += `<a-plane position="${xPos} ${-(baseH/2 + 0.12)} 0.001" width="0.08" height="0.1" color="#eee" material="opacity: 0.9; shader: flat"></a-plane>`;
+        }
 
         entity.innerHTML = `
-          <a-box id="frame-bg-${item.id}" position="0 0 -0.06" width="${baseW + 0.15}" height="${baseH + 0.15}" depth="0.06" color="#1a1a1a"></a-box>
-          <a-box id="frame-border-${item.id}" position="0 0 -0.03" width="${baseW + 0.06}" height="${baseH + 0.06}" depth="0.04" color="#D4AF37"></a-box>
+          <!-- Main Strip Background -->
+          <a-box id="frame-bg-${item.id}" position="0 0 -0.06" width="${baseW + 0.2}" height="${baseH + stripExtension * 2}" depth="0.06" color="#111" material="roughness: 1; metalness: 0"></a-box>
+          
+          <!-- Glossy Border -->
+          <a-box id="frame-border-${item.id}" position="0 0 -0.02" width="${baseW + 0.08}" height="${baseH + 0.08}" depth="0.04" color="#222" material="roughness: 0.2; metalness: 0.8"></a-box>
+          
+          <!-- Film Holes -->
+          <a-entity id="holes-top-${item.id}">${holesTop}</a-entity>
+          <a-entity id="holes-bottom-${item.id}">${holesBottom}</a-entity>
+
+          <!-- Artwork -->
           <a-image id="canvas-${item.id}" src="#img-${item.id}" width="${baseW}" height="${baseH}" class="clickable" gallery-item="id: ${item.id}"></a-image>
+          
+          <!-- Label / Index -->
+          <a-text value="FRAME ${item.id.toString().padStart(2, '0')}" position="${-(baseW/2)} ${-(baseH/2 + 0.35)} 0.01" scale="0.4 0.4 0.4" font="monoid" color="#444"></a-text>
         `;
 
-        groupEntity.appendChild(entity);
+        container.appendChild(entity);
 
         // 4. Dynamic Sizing Logic: Detect real image dimensions
         const checkImg = new Image();
