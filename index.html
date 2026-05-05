@@ -30,6 +30,10 @@
         0%, 100% { opacity: 0.2; transform: scale(1); }
         50% { opacity: 0.3; transform: scale(1.1); }
       }
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
       .animate-pulse-soft { animation: pulse-soft 8s infinite ease-in-out; }
     </style>
 
@@ -87,6 +91,16 @@
 
       // 2. A-Frame Component Registration (Must be before scene)
       if (typeof AFRAME !== 'undefined') {
+        AFRAME.registerComponent('hover-float', {
+          schema: { offset: {type: 'number', default: 0} },
+          tick: function (t) {
+            const yOffset = Math.sin((t + this.data.offset) / 1000) * 0.05;
+            const rotOffset = Math.cos((t + this.data.offset) / 2000) * 0.5;
+            this.el.object3D.position.y += Math.sin(t / 1500) * 0.0005;
+            this.el.object3D.rotation.z = THREE.MathUtils.degToRad(rotOffset);
+          }
+        });
+
         AFRAME.registerComponent('gallery-item', {
           schema: { id: {type: 'number'} },
           init: function () {
@@ -96,15 +110,33 @@
             });
             
             this.el.addEventListener('mouseenter', () => {
+              // AUTO-POP: Show info card on hover/point
               const item = GALLERY_DATA.find(d => d.id === this.data.id);
               window.showInfoCard(item);
 
               this.el.setAttribute('animation__scale', {
                 property: 'scale',
-                to: '1.1 1.1 1.1',
+                to: '1.08 1.08 1.08',
                 dur: 300,
                 easing: 'easeOutQuad'
               });
+
+              // Slide photo forward slightly for depth
+              const canvas = this.el.querySelector('a-image');
+              if (canvas) {
+                canvas.setAttribute('animation__pos', {
+                  property: 'position',
+                  to: '0 0 0.08',
+                  dur: 300
+                });
+              }
+
+              // Enhance border glow
+              const border = this.el.querySelector('.frame-border');
+              if (border) {
+                border.setAttribute('material', 'emissive', '#D4AF37');
+                border.setAttribute('material', 'emissiveIntensity', '0.5');
+              }
             });
             
             this.el.addEventListener('mouseleave', () => {
@@ -114,6 +146,20 @@
                 dur: 300,
                 easing: 'easeOutQuad'
               });
+
+              const canvas = this.el.querySelector('a-image');
+              if (canvas) {
+                canvas.setAttribute('animation__pos', {
+                  property: 'position',
+                  to: '0 0 0',
+                  dur: 300
+                });
+              }
+
+              const border = this.el.querySelector('.frame-border');
+              if (border) {
+                border.setAttribute('material', 'emissiveIntensity', '0');
+              }
             });
           }
         });
@@ -124,20 +170,6 @@
             if (!this.data.target) return;
             const targetPos = this.data.target.object3D.position;
             this.el.object3D.position.copy(targetPos);
-          }
-        });
-
-        AFRAME.registerComponent('camera-limit', {
-          schema: { limit: {type: 'number', default: 95} },
-          tick: function () {
-            const rot = this.el.getAttribute('rotation');
-            if (rot.y > this.data.limit) {
-              rot.y = this.data.limit;
-              this.el.setAttribute('rotation', rot);
-            } else if (rot.y < -this.data.limit) {
-              rot.y = -this.data.limit;
-              this.el.setAttribute('rotation', rot);
-            }
           }
         });
       }
@@ -155,7 +187,6 @@
           return;
         }
         window.currentItem = item;
-        document.getElementById('card-description').innerText = item.description;
         
         card.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
         card.classList.add('pointer-events-auto');
@@ -182,27 +213,35 @@
 
       window.enterAR = function() {
         const scene = document.querySelector('a-scene');
+        
+        // Secure Context Check
+        if (!window.isSecureContext && window.location.hostname !== "localhost") {
+          alert("AR requires HTTPS to access the camera. If you are hosting on your own server, please ensure you have an SSL certificate (https://) for this domain.");
+          return;
+        }
+
+        // WebXR support check
+        if (!navigator.xr) {
+          alert("WebXR/AR is not supported on this browser or device. For AR, use a mobile device with Chrome or Safari.");
+          return;
+        }
+
         if (scene && scene.enterAR) scene.enterAR();
       };
+
+      // Check on load to warn user
+      window.addEventListener('DOMContentLoaded', () => {
+        if (!window.isSecureContext && window.location.hostname !== "localhost") {
+          const noteDisplay = document.getElementById('curator-note-display');
+          if (noteDisplay) {
+            noteDisplay.innerHTML += `<br><br><span class="text-red-400 font-bold block mt-2">⚠️ HTTPS Required: AR will be disabled unless served over a secure connection.</span>`;
+          }
+        }
+      });
 
       window.closeInstructions = function() {
         const modal = document.getElementById('instructions-modal');
         if (modal) modal.classList.add('opacity-0', 'pointer-events-none');
-        
-        // Trigger Reveal Animation
-        const items = document.querySelectorAll('.gallery-entry');
-        items.forEach((el, i) => {
-          setTimeout(() => {
-            el.setAttribute('visible', 'true');
-            el.setAttribute('animation__reveal', {
-              property: 'scale',
-              from: '0.01 0.01 0.01',
-              to: '1 1 1',
-              dur: 800,
-              easing: 'easeOutElastic'
-            });
-          }, 400 + (i * 150));
-        });
       };
     </script>
   </head>
@@ -214,20 +253,37 @@
     >
       <a-assets id="gallery-assets"></a-assets>
 
-      <a-camera id="main-camera" camera-limit="limit: 100" position="0 1.6 0" look-controls="pointerLockEnabled: false; touchEnabled: true;" wasd-controls="enabled: false">
-        <a-cursor 
-          color="#FFD700" 
-          animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150"
+      <a-camera id="main-camera" position="0 1.6 0" look-controls="pointerLockEnabled: false; touchEnabled: true;" wasd-controls="enabled: false">
+        <a-entity
+          cursor="fuse: false; rayOrigin: mouse;"
           raycaster="objects: .clickable"
-        ></a-cursor>
+        ></a-entity>
+        
+        <!-- Focus Spotlight: Subtly highlights what the user looks at -->
+        <a-light type="spot" color="#fff" intensity="0.4" distance="10" angle="30" penumbra="0.5" position="0 0 0" target="#main-camera"></a-light>
+
+        <a-entity
+          position="0 0 -1"
+          geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025"
+          material="color: #FFD700; shader: flat; opacity: 0.8; transparent: true"
+          cursor="fuse: false;"
+          raycaster="objects: .clickable"
+          animation__enter="property: scale; to: 2 2 2; dur: 200; startEvents: mouseenter"
+          animation__leave="property: scale; to: 1 1 1; dur: 200; startEvents: mouseleave"
+          animation__click="property: scale; to: 0.5 0.5 0.5; dur: 100; startEvents: click; dir: alternate; loop: 1"
+        ></a-entity>
       </a-camera>
 
       <a-entity id="gallery-container" follow-position="#main-camera" position="0 1.6 0"></a-entity>
 
-      <a-light type="ambient" intensity="0.8"></a-light>
-      <a-light type="directional" position="1 5 2" intensity="0.6"></a-light>
+      <a-light type="ambient" intensity="0.5"></a-light>
+      <a-light type="directional" position="1 5 2" intensity="0.4"></a-light>
       
-      <a-plane id="floor" rotation="-90 0 0" width="50" height="50" color="#050505" material="roughness: 0.8; metalness: 0.2"></a-plane>
+      <!-- Standard Matte Floor -->
+      <a-plane id="floor" rotation="-90 0 0" width="100" height="100" color="#050505" material="roughness: 1; metalness: 0"></a-plane>
+      
+      <!-- Subtle Horizon Glow -->
+      <a-cylinder radius="50" height="0.1" position="0 -0.05 0" material="color: #1a1a1a; shader: flat; side: double; opacity: 0.5; transparent: true"></a-cylinder>
       
       <!-- Subtle Backdrop Wall to ground the gallery -->
       <a-entity position="0 2 -6" rotation="0 0 0">
@@ -253,7 +309,7 @@
           </div>
         </div>
         
-        <button onclick="location.reload()" class="p-4 glass rounded-full text-white hover:bg-white/10 transition-all active:scale-90 pointer-events-auto">
+        <button onclick="location.reload()" class="p-4 glass rounded-full text-white hover:bg-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all duration-300 active:scale-90 pointer-events-auto border border-white/20">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
         </button>
       </div>
@@ -262,41 +318,35 @@
       <div class="flex flex-row justify-between items-end w-full pointer-events-none relative z-10">
         
         <!-- Info Card -->
-        <div id="info-card" class="opacity-0 translate-y-10 pointer-events-none transition-all duration-500 glass p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-2xl max-w-[340px] md:max-w-md w-full text-white relative overflow-hidden mb-4 border border-white/10">
+        <div id="info-card" class="opacity-0 translate-y-10 pointer-events-none transition-all duration-500 glass p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] max-w-[340px] md:max-w-md w-full text-white relative overflow-hidden mb-4 border border-white/10">
           <!-- Decorative Background Elements -->
           <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-          <div class="absolute bottom-0 left-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl -ml-12 -mb-12 pointer-events-none"></div>
+          <div class="absolute bottom-0 left-0 w-24 h-24 bg-gold-500/5 rounded-full blur-2xl -ml-12 -mb-12 pointer-events-none"></div>
           
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-30"></div>
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-30"></div>
           
           <!-- Close Button -->
-          <button onclick="window.showInfoCard(null)" class="absolute top-6 right-6 p-2 rounded-full hover:bg-white/10 text-white/30 hover:text-white transition-all duration-300 pointer-events-auto group">
+          <button onclick="window.showInfoCard(null)" class="absolute top-6 right-6 p-2 rounded-full hover:bg-white/15 text-white/30 hover:text-white transition-all duration-300 pointer-events-auto group border border-transparent hover:border-white/10">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="group-hover:rotate-90 transition-transform duration-300"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
 
           <!-- Editorial Layout -->
           <div class="relative z-10">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-8 h-[1px] bg-white/20"></div>
-              <span class="text-[10px] uppercase font-display font-medium tracking-[0.3em] text-white/40">Entry Detail</span>
-            </div>
-
-            <p id="card-description" class="text-sm md:text-base text-white/70 leading-relaxed font-serif italic mb-8 md:mb-10 line-clamp-5 md:line-clamp-none"></p>
-
-            <button onclick="window.viewFullscreen()" id="view-fullscreen-btn" class="group w-full py-4 bg-white text-black rounded-2xl font-display font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-white/90 transition-all duration-300 flex items-center justify-center gap-3 pointer-events-auto shadow-xl hover:shadow-white/10">
+            <button onclick="window.viewFullscreen()" id="view-fullscreen-btn" class="group w-full py-5 bg-white text-black rounded-2xl font-display font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-zinc-100 transition-all duration-300 flex items-center justify-center gap-3 pointer-events-auto shadow-[0_15px_30px_-5px_rgba(255,255,255,0.2)] hover:shadow-[0_20px_40px_-5px_rgba(255,255,255,0.3)] active:scale-[0.98]">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="group-hover:scale-110 transition-transform"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-              View Artwork
+              View Fullscreen
             </button>
           </div>
         </div>
 
         <!-- Launch Button -->
         <div class="pointer-events-auto flex flex-col items-end">
-          <button id="ar-launch-btn" onclick="window.enterAR()" class="group relative px-8 py-4 md:px-12 md:py-6 bg-white text-black rounded-full font-display font-bold shadow-[0_0_50px_rgba(255,255,255,0.2)] flex items-center gap-3 md:gap-4 transition-all hover:scale-105 active:scale-95 pointer-events-auto">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-            <span class="tracking-widest uppercase text-[10px] md:text-xs">Launch AR</span>
-            <div class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-black/5 flex items-center justify-center group-hover:bg-black/10 transition-colors">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          <button id="ar-launch-btn" onclick="window.enterAR()" class="group relative px-10 py-5 md:px-14 md:py-7 bg-white text-black rounded-full font-display font-bold shadow-[0_0_60px_rgba(255,255,255,0.15)] flex items-center gap-4 md:gap-5 transition-all duration-500 hover:shadow-[0_0_80px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 pointer-events-auto overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            <span class="tracking-[0.25em] uppercase text-[11px] md:text-sm">Launch AR</span>
+            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-black/5 flex items-center justify-center group-hover:bg-black/10 transition-all group-hover:translate-x-1">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
             </div>
           </button>
         </div>
@@ -313,7 +363,12 @@
     </div>
 
     <!-- Instructions Modal -->
-    <div id="instructions-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md transition-opacity duration-700 flex items-center justify-center p-8 text-center">
+    <div id="instructions-modal" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xl transition-opacity duration-700 flex items-center justify-center p-8 text-center">
+      <div class="absolute inset-0 opacity-20 overflow-hidden pointer-events-none">
+        <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/30 rounded-full blur-[120px] animate-pulse-soft"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] animate-pulse-soft" style="animation-delay: -4s"></div>
+      </div>
+
       <div class="max-w-md relative">
         <div class="w-20 h-20 mx-auto mb-8 rounded-3xl bg-white/5 flex items-center justify-center border border-white/10">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>
@@ -365,11 +420,11 @@
       const noteDisplay = document.getElementById('curator-note-display');
       if (noteDisplay) noteDisplay.innerText = `"${CURATOR_NOTE}"`;
 
-      // Enhanced Filmstrip Configuration
-      const totalItems = GALLERY_DATA.length;
-      const arcPadding = 16; // Further reduced for tighter grouping
-      const radius = 5.8;    // Slightly further away for better panoramas
-      const galleryY = 1.6;  // Eye level height
+      // Grid Configuration
+      const numCols = 3;
+      const arcPadding = 24; // Degrees between columns
+      const yStep = 1.2;     // Vertical distance between rows
+      const radius = 5.2;    // Distance from the viewer
 
       // Initialize Items
       GALLERY_DATA.forEach((item, index) => {
@@ -381,52 +436,33 @@
         img.referrerPolicy = "no-referrer";
         assets.appendChild(img);
 
-        // 2. Single Row Positioning Logic
-        // Centering the arc: (index - (total-1)/2)
-        const angle = (index - (totalItems - 1) / 2) * arcPadding;
+        // 2. Position Logic (3x3 Grid)
+        const col = index % numCols;
+        const row = Math.floor(index / numCols);
+
+        // Calculate horizontal position along an arc
+        const angle = (col - 1) * arcPadding;
         const rad = angle * (Math.PI / 180);
         
         let posX = Math.sin(rad) * radius;
         let posZ = -Math.cos(rad) * radius;
         
+        // Calculate vertical position (Shifted to balance eye level)
+        const posY = (1.2 - row) * yStep; 
+        
         const entity = document.createElement('a-entity');
-        entity.setAttribute('position', `${posX} ${galleryY} ${posZ}`);
+        entity.setAttribute('position', `${posX} ${posY} ${posZ}`);
         entity.setAttribute('rotation', `0 ${-angle} 0`);
-        entity.setAttribute('class', 'gallery-entry');
-        entity.setAttribute('visible', 'false'); // Hidden for staggered entry
-        entity.setAttribute('scale', '0.01 0.01 0.01');
+        entity.setAttribute('hover-float', `offset: ${index * 500}`);
 
-        // 3. Create the Filmstrip Frame & Canvas
+        // 3. Create the Frame & Canvas (Landscape friendly)
         const baseH = 1.0; 
         const baseW = 1.6;
-        const stripExtension = 0.25; // Extra height for the strip edges
-
-        // Generate holes for the filmstrip effect
-        let holesTop = '';
-        let holesBottom = '';
-        const numHoles = 6;
-        for(let i=0; i<numHoles; i++) {
-          const xPos = -(baseW/2) + (i * (baseW/(numHoles-1)));
-          holesTop += `<a-plane position="${xPos} ${baseH/2 + 0.12} 0.001" width="0.08" height="0.1" color="#eee" material="opacity: 0.9; shader: flat"></a-plane>`;
-          holesBottom += `<a-plane position="${xPos} ${-(baseH/2 + 0.12)} 0.001" width="0.08" height="0.1" color="#eee" material="opacity: 0.9; shader: flat"></a-plane>`;
-        }
 
         entity.innerHTML = `
-          <!-- Main Strip Background -->
-          <a-box id="frame-bg-${item.id}" position="0 0 -0.08" width="${baseW + 0.2}" height="${baseH + stripExtension * 2}" depth="0.06" color="#111" material="roughness: 1; metalness: 0"></a-box>
-          
-          <!-- Glossy Border -->
-          <a-box id="frame-border-${item.id}" position="0 0 -0.04" width="${baseW + 0.08}" height="${baseH + 0.08}" depth="0.04" color="#222" material="roughness: 0.2; metalness: 0.8"></a-box>
-          
-          <!-- Film Holes -->
-          <a-entity id="holes-top-${item.id}" position="0 0 0.005">${holesTop}</a-entity>
-          <a-entity id="holes-bottom-${item.id}" position="0 0 0.005">${holesBottom}</a-entity>
-
-          <!-- Artwork (Moved slightly forward to 0.01 to stop blinking) -->
-          <a-image id="canvas-${item.id}" src="#img-${item.id}" position="0 0 0.01" width="${baseW}" height="${baseH}" class="clickable" gallery-item="id: ${item.id}"></a-image>
-          
-          <!-- Label / Index -->
-          <a-text value="FRAME ${item.id.toString().padStart(2, '0')}" position="${-(baseW/2)} ${-(baseH/2 + 0.35)} 0.02" scale="0.4 0.4 0.4" font="monoid" color="#666"></a-text>
+          <a-box id="frame-bg-${item.id}" position="0 0 -0.06" width="${baseW + 0.15}" height="${baseH + 0.15}" depth="0.06" color="#1a1a1a"></a-box>
+          <a-box id="frame-border-${item.id}" class="frame-border" position="0 0 -0.03" width="${baseW + 0.06}" height="${baseH + 0.06}" depth="0.04" color="#D4AF37" material="roughness: 0.3; metalness: 0.8"></a-box>
+          <a-image id="canvas-${item.id}" src="#img-${item.id}" width="${baseW}" height="${baseH}" class="clickable" gallery-item="id: ${item.id}"></a-image>
         `;
 
         container.appendChild(entity);
