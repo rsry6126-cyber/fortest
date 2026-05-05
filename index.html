@@ -35,6 +35,29 @@
         100% { transform: translateX(100%); }
       }
       .animate-pulse-soft { animation: pulse-soft 8s infinite ease-in-out; }
+      
+      /* Screenshot Deterrents */
+      body {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+      
+      #protection-overlay {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        z-index: 9999;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        color: white;
+        font-family: sans-serif;
+        backdrop-filter: blur(20px);
+      }
     </style>
 
     <script>
@@ -42,51 +65,15 @@
       const CURATOR_NOTE = "This is a digital experience that will showcase pictures showing how our Leaders became a good influence through wholeheartedly fulfilling their duty. And as a result, it led to the wholehearted fulfillment of duties by the ministers and ministerial workers and the Church officers";
 
       const GALLERY_DATA = [
-        { 
-          id: 1, 
-          file: "assets/pic1.jpg", 
-          description: "Painting ng eye po."
-        },
-        { 
-          id: 2, 
-          file: "assets/pic2.jpg", 
-          description: "Picture ng ------"
-        },
-        { 
-          id: 3, 
-          file: "assets/pic3.jpg", 
-          description: "Mossaic lang po ----"
-        },
-        { 
-          id: 4, 
-          file: "assets/pic4.jpg", 
-          description: "Picture ng girl."
-        },
-        { 
-          id: 5, 
-          file: "assets/pic5.jpg", 
-          description: "Painting ng guitar po."
-        },
-        { 
-          id: 6, 
-          file: "assets/pic6.jpg", 
-          description: "Nagpplay po ng instrument."
-        },
-        { 
-          id: 7, 
-          file: "assets/pic1.jpg", 
-          description: "Additional gallery piece."
-        },
-        { 
-          id: 8, 
-          file: "assets/pic2.jpg", 
-          description: "Additional gallery piece."
-        },
-        { 
-          id: 9, 
-          file: "assets/pic3.jpg", 
-          description: "Additional gallery piece."
-        }
+        { id: 1, file: "assets/pic1.jpg" },
+        { id: 2, file: "assets/pic2.jpg" },
+        { id: 3, file: "assets/pic3.jpg" },
+        { id: 4, file: "assets/pic4.jpg" },
+        { id: 5, file: "assets/pic5.jpg" },
+        { id: 6, file: "assets/pic6.jpg" },
+        { id: 7, file: "assets/pic1.jpg" },
+        { id: 8, file: "assets/pic2.jpg" },
+        { id: 9, file: "assets/pic3.jpg" }
       ];
 
       // 2. A-Frame Component Registration (Must be before scene)
@@ -177,6 +164,23 @@
       // 3. UI Functions
       window.currentItem = null;
 
+      // Screenshot Deterrence
+      document.addEventListener('contextmenu', e => e.preventDefault());
+      document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'u')) {
+          e.preventDefault();
+        }
+        if (e.key === 'F12') e.preventDefault();
+      });
+
+      window.addEventListener('blur', () => {
+        document.getElementById('protection-overlay').style.display = 'flex';
+      });
+
+      window.addEventListener('focus', () => {
+        document.getElementById('protection-overlay').style.display = 'none';
+      });
+
       window.showInfoCard = function(item) {
         const card = document.getElementById('info-card');
         if (!card) return;
@@ -259,8 +263,7 @@
           raycaster="objects: .clickable"
         ></a-entity>
         
-        <!-- Focus Spotlight: Subtly highlights what the user looks at -->
-        <a-light type="spot" color="#fff" intensity="0.4" distance="10" angle="30" penumbra="0.5" position="0 0 0" target="#main-camera"></a-light>
+
 
         <a-entity
           position="0 0 -1"
@@ -283,7 +286,7 @@
       <a-plane id="floor" rotation="-90 0 0" width="100" height="100" color="#050505" material="roughness: 1; metalness: 0"></a-plane>
       
       <!-- Subtle Horizon Glow -->
-      <a-cylinder radius="50" height="0.1" position="0 -0.05 0" material="color: #1a1a1a; shader: flat; side: double; opacity: 0.5; transparent: true"></a-cylinder>
+      <a-cylinder radius="50" height="0.1" position="0 -0.1 0" material="color: #1a1a1a; shader: flat; side: double; opacity: 0.5; transparent: true"></a-cylinder>
       
       <!-- Subtle Backdrop Wall to ground the gallery -->
       <a-entity position="0 2 -6" rotation="0 0 0">
@@ -292,6 +295,13 @@
 
       <a-sky id="sky" color="#000"></a-sky>
     </a-scene>
+
+    <div id="protection-overlay" style="position: fixed; inset: 0; background: #000; z-index: 10000; display: none; justify-content: center; align-items: center; text-align: center; color: white; font-family: sans-serif; backdrop-filter: blur(20px);">
+      <div style="padding: 2rem;">
+        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">Content Protected</h2>
+        <p style="color: rgba(255,255,255,0.5);">Please keep focus on this window to view the gallery.</p>
+      </div>
+    </div>
 
     <!-- UI Overlay Container -->
     <div id="ui-container" class="fixed inset-0 z-50 pointer-events-none">
@@ -309,7 +319,7 @@
           </div>
         </div>
         
-        <button onclick="location.reload()" class="p-4 glass rounded-full text-white hover:bg-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all duration-300 active:scale-90 pointer-events-auto border border-white/20">
+        <button onclick="location.reload()" class="p-4 glass rounded-full text-white hover:bg-white/20 transition-all duration-300 active:scale-90 pointer-events-auto border border-white/20">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
         </button>
       </div>
@@ -332,7 +342,7 @@
 
           <!-- Editorial Layout -->
           <div class="relative z-10">
-            <button onclick="window.viewFullscreen()" id="view-fullscreen-btn" class="group w-full py-5 bg-white text-black rounded-2xl font-display font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-zinc-100 transition-all duration-300 flex items-center justify-center gap-3 pointer-events-auto shadow-[0_15px_30px_-5px_rgba(255,255,255,0.2)] hover:shadow-[0_20px_40px_-5px_rgba(255,255,255,0.3)] active:scale-[0.98]">
+            <button onclick="window.viewFullscreen()" id="view-fullscreen-btn" class="group w-full py-5 bg-white text-black rounded-2xl font-display font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-zinc-100 transition-all duration-300 flex items-center justify-center gap-3 pointer-events-auto active:scale-[0.98]">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="group-hover:scale-110 transition-transform"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
               View Fullscreen
             </button>
@@ -341,7 +351,7 @@
 
         <!-- Launch Button -->
         <div class="pointer-events-auto flex flex-col items-end">
-          <button id="ar-launch-btn" onclick="window.enterAR()" class="group relative px-10 py-5 md:px-14 md:py-7 bg-white text-black rounded-full font-display font-bold shadow-[0_0_60px_rgba(255,255,255,0.15)] flex items-center gap-4 md:gap-5 transition-all duration-500 hover:shadow-[0_0_80px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 pointer-events-auto overflow-hidden">
+          <button id="ar-launch-btn" onclick="window.enterAR()" class="group relative px-10 py-5 md:px-14 md:py-7 bg-white text-black rounded-full font-display font-bold flex items-center gap-4 md:gap-5 transition-all duration-500 hover:scale-105 active:scale-95 pointer-events-auto overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
             <span class="tracking-[0.25em] uppercase text-[11px] md:text-sm">Launch AR</span>
@@ -398,7 +408,7 @@
           </div>
         </div>
 
-        <button onclick="window.closeInstructions()" class="w-full py-6 bg-white text-black rounded-[2rem] font-display font-bold uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 shadow-2xl">
+        <button onclick="window.closeInstructions()" class="w-full py-6 bg-white text-black rounded-[2rem] font-display font-bold uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95">
           Enter Exhibit
         </button>
       </div>
