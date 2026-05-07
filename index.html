@@ -8,6 +8,7 @@
     <!-- Libraries -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Fonts -->
@@ -49,14 +50,8 @@
         position: fixed;
         inset: 0;
         background: #000;
-        z-index: 9999;
+        z-index: 99999;
         display: none;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        color: white;
-        font-family: sans-serif;
-        backdrop-filter: blur(20px);
       }
     </style>
 
@@ -73,18 +68,54 @@
         { id: 6, file: "assets/pic6.jpg" },
         { id: 7, file: "assets/pic1.jpg" },
         { id: 8, file: "assets/pic2.jpg" },
-        { id: 9, file: "assets/pic3.jpg" }
+        { id: 9, file: "assets/pic3.jpg" },
+        { id: 10, file: "assets/pic4.jpg" },
+        { id: 11, file: "assets/pic5.jpg" },
+        { id: 12, file: "assets/pic6.jpg" },
+        { id: 13, file: "assets/pic1.jpg" },
+        { id: 14, file: "assets/pic2.jpg" },
+        { id: 15, file: "assets/pic3.jpg" }
       ];
 
       // 2. A-Frame Component Registration (Must be before scene)
       if (typeof AFRAME !== 'undefined') {
         AFRAME.registerComponent('hover-float', {
           schema: { offset: {type: 'number', default: 0} },
+          init: function() {
+            this.initialY = this.el.object3D.position.y;
+          },
           tick: function (t) {
             const yOffset = Math.sin((t + this.data.offset) / 1000) * 0.05;
+            this.el.object3D.position.y = this.initialY + yOffset;
             const rotOffset = Math.cos((t + this.data.offset) / 2000) * 0.5;
-            this.el.object3D.position.y += Math.sin(t / 1500) * 0.0005;
             this.el.object3D.rotation.z = THREE.MathUtils.degToRad(rotOffset);
+          }
+        });
+
+        AFRAME.registerComponent('maintain-perceived-size', {
+          schema: { 
+            baseScale: {type: 'number', default: 1},
+            referenceDistance: {type: 'number', default: 6.2} // The radius where they were designed
+          },
+          tick: function () {
+            const cameraEl = this.el.sceneEl.camera.el;
+            if (!cameraEl) return;
+            
+            const cameraPos = new THREE.Vector3();
+            cameraEl.object3D.getWorldPosition(cameraPos);
+            
+            const entityPos = new THREE.Vector3();
+            this.el.object3D.getWorldPosition(entityPos);
+            
+            const distance = cameraPos.distanceTo(entityPos);
+            
+            // Perceived size is inversely proportional to distance.
+            // To maintain size, scale must be proportional to distance.
+            const scaleFactor = (distance / this.data.referenceDistance) * this.data.baseScale;
+            
+            // Clamp scale to prevent them from vanishing or becoming massive
+            const clampedScale = Math.max(0.1, Math.min(2, scaleFactor));
+            this.el.object3D.scale.set(clampedScale, clampedScale, clampedScale);
           }
         });
 
@@ -100,13 +131,6 @@
               // AUTO-POP: Show info card on hover/point
               const item = GALLERY_DATA.find(d => d.id === this.data.id);
               window.showInfoCard(item);
-
-              this.el.setAttribute('animation__scale', {
-                property: 'scale',
-                to: '1.08 1.08 1.08',
-                dur: 300,
-                easing: 'easeOutQuad'
-              });
 
               // Slide photo forward slightly for depth
               const canvas = this.el.querySelector('a-image');
@@ -127,13 +151,6 @@
             });
             
             this.el.addEventListener('mouseleave', () => {
-              this.el.setAttribute('animation__scale', {
-                property: 'scale',
-                to: '1 1 1',
-                dur: 300,
-                easing: 'easeOutQuad'
-              });
-
               const canvas = this.el.querySelector('a-image');
               if (canvas) {
                 canvas.setAttribute('animation__pos', {
@@ -155,8 +172,10 @@
           schema: { target: {type: 'selector'} },
           tick: function () {
             if (!this.data.target) return;
-            const targetPos = this.data.target.object3D.position;
-            this.el.object3D.position.copy(targetPos);
+            // Use world position to capture AR movement properly in all environments
+            const worldPos = new THREE.Vector3();
+            this.data.target.object3D.getWorldPosition(worldPos);
+            this.el.object3D.position.copy(worldPos);
           }
         });
       }
@@ -174,7 +193,8 @@
       });
 
       window.addEventListener('blur', () => {
-        document.getElementById('protection-overlay').style.display = 'flex';
+        document.getElementById('protection-overlay').style.display = 'block';
+        // Stop audio if any, or hide other sensitive layers
       });
 
       window.addEventListener('focus', () => {
@@ -285,23 +305,10 @@
       <!-- Standard Matte Floor -->
       <a-plane id="floor" rotation="-90 0 0" width="100" height="100" color="#050505" material="roughness: 1; metalness: 0"></a-plane>
       
-      <!-- Subtle Horizon Glow -->
-      <a-cylinder radius="50" height="0.1" position="0 -0.1 0" material="color: #1a1a1a; shader: flat; side: double; opacity: 0.5; transparent: true"></a-cylinder>
-      
-      <!-- Subtle Backdrop Wall to ground the gallery -->
-      <a-entity position="0 2 -6" rotation="0 0 0">
-        <a-plane width="15" height="8" color="#0a0a0a" material="opacity: 0.5; transparent: true; roughness: 1"></a-plane>
-      </a-entity>
-
       <a-sky id="sky" color="#000"></a-sky>
     </a-scene>
 
-    <div id="protection-overlay" style="position: fixed; inset: 0; background: #000; z-index: 10000; display: none; justify-content: center; align-items: center; text-align: center; color: white; font-family: sans-serif; backdrop-filter: blur(20px);">
-      <div style="padding: 2rem;">
-        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">Content Protected</h2>
-        <p style="color: rgba(255,255,255,0.5);">Please keep focus on this window to view the gallery.</p>
-      </div>
-    </div>
+    <div id="protection-overlay"></div>
 
     <!-- UI Overlay Container -->
     <div id="ui-container" class="fixed inset-0 z-50 pointer-events-none">
@@ -404,7 +411,7 @@
           </div>
           <div class="flex items-center gap-4 text-left glass-light px-6 py-4 rounded-2xl border-white/5">
             <div class="w-6 h-6 rounded-full bg-white/5 flex-shrink-0 flex items-center justify-center text-[10px] font-bold border border-white/10">2</div>
-            <p class="text-white/60 text-[11px] font-medium tracking-wide">Point the cursor on any picture before viewing it on fullscreen.</p>
+            <p class="text-white/60 text-[11px] font-medium tracking-wide">Focus on any artwork to reveal its story.</p>
           </div>
         </div>
 
@@ -431,10 +438,10 @@
       if (noteDisplay) noteDisplay.innerText = `"${CURATOR_NOTE}"`;
 
       // Grid Configuration
-      const numCols = 3;
-      const arcPadding = 24; // Degrees between columns
-      const yStep = 1.2;     // Vertical distance between rows
-      const radius = 5.2;    // Distance from the viewer
+      const numCols = 5;
+      const arcPadding = 20; // Degrees between columns
+      const yRowStep = 1.4;     // Vertical distance between rows
+      const radius = 6.2;    // Distance from the viewer
 
       // Initialize Items
       GALLERY_DATA.forEach((item, index) => {
@@ -450,27 +457,28 @@
         const col = index % numCols;
         const row = Math.floor(index / numCols);
 
-        // Calculate horizontal position along an arc
-        const angle = (col - 1) * arcPadding;
+        // Calculate horizontal position along an arc centered to viewer
+        const angle = (col - (numCols - 1) / 2) * arcPadding;
         const rad = angle * (Math.PI / 180);
         
         let posX = Math.sin(rad) * radius;
         let posZ = -Math.cos(rad) * radius;
         
-        // Calculate vertical position (Shifted to balance eye level)
-        const posY = (1.2 - row) * yStep; 
+        // Calculate vertical position (Shifted to balance eye level and keep above floor)
+        const rowOffset = (Math.floor(GALLERY_DATA.length / numCols) - 1) / 2;
+        const posY = (rowOffset - row) * yRowStep + 0.8; 
         
         const entity = document.createElement('a-entity');
         entity.setAttribute('position', `${posX} ${posY} ${posZ}`);
         entity.setAttribute('rotation', `0 ${-angle} 0`);
         entity.setAttribute('hover-float', `offset: ${index * 500}`);
+        entity.setAttribute('maintain-perceived-size', '');
 
         // 3. Create the Frame & Canvas (Landscape friendly)
         const baseH = 1.0; 
         const baseW = 1.6;
 
         entity.innerHTML = `
-          <a-box id="frame-bg-${item.id}" position="0 0 -0.06" width="${baseW + 0.15}" height="${baseH + 0.15}" depth="0.06" color="#1a1a1a"></a-box>
           <a-box id="frame-border-${item.id}" class="frame-border" position="0 0 -0.03" width="${baseW + 0.06}" height="${baseH + 0.06}" depth="0.04" color="#D4AF37" material="roughness: 0.3; metalness: 0.8"></a-box>
           <a-image id="canvas-${item.id}" src="#img-${item.id}" width="${baseW}" height="${baseH}" class="clickable" gallery-item="id: ${item.id}"></a-image>
         `;
@@ -497,16 +505,11 @@
           
           // Update A-Frame elements
           const canvas = document.getElementById(`canvas-${item.id}`);
-          const bg = document.getElementById(`frame-bg-${item.id}`);
           const border = document.getElementById(`frame-border-${item.id}`);
           
           if (canvas) {
             canvas.setAttribute('width', finalW);
             canvas.setAttribute('height', finalH);
-          }
-          if (bg) {
-            bg.setAttribute('width', finalW + 0.15);
-            bg.setAttribute('height', finalH + 0.15);
           }
           if (border) {
             border.setAttribute('width', finalW + 0.06);
