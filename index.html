@@ -79,23 +79,10 @@
 
       // 2. A-Frame Component Registration (Must be before scene)
       if (typeof AFRAME !== 'undefined') {
-        AFRAME.registerComponent('hover-float', {
-          schema: { offset: {type: 'number', default: 0} },
-          init: function() {
-            this.initialY = this.el.object3D.position.y;
-          },
-          tick: function (t) {
-            const yOffset = Math.sin((t + this.data.offset) / 1000) * 0.05;
-            this.el.object3D.position.y = this.initialY + yOffset;
-            const rotOffset = Math.cos((t + this.data.offset) / 2000) * 0.5;
-            this.el.object3D.rotation.z = THREE.MathUtils.degToRad(rotOffset);
-          }
-        });
-
         AFRAME.registerComponent('maintain-perceived-size', {
           schema: { 
             baseScale: {type: 'number', default: 1},
-            referenceDistance: {type: 'number', default: 4.0} // The radius where they were designed
+            referenceDistance: {type: 'number', default: 4.8} // The radius where they were designed
           },
           tick: function () {
             const cameraEl = this.el.sceneEl.camera.el;
@@ -440,8 +427,8 @@
       // Grid Configuration
       const numCols = 5;
       const arcPadding = 24; // Degrees between columns
-      const yRowStep = 1.0;     // Vertical distance between rows
-      const radius = 4.0;    // Distance from the viewer
+      const yRowStep = 1.4;     // Vertical distance between rows
+      const radius = 4.8;    // Distance from the viewer
 
       // Initialize Items
       GALLERY_DATA.forEach((item, index) => {
@@ -466,12 +453,11 @@
         
         // Calculate vertical position (Shifted to balance eye level and keep above floor)
         const rowOffset = (Math.floor(GALLERY_DATA.length / numCols) - 1) / 2;
-        const posY = (rowOffset - row) * yRowStep + 0.1; 
+        const posY = (rowOffset - row) * yRowStep + 0.8; 
         
         const entity = document.createElement('a-entity');
         entity.setAttribute('position', `${posX} ${posY} ${posZ}`);
         entity.setAttribute('rotation', `0 ${-angle} 0`);
-        entity.setAttribute('hover-float', `offset: ${index * 500}`);
         entity.setAttribute('maintain-perceived-size', '');
 
         // 3. Create the Frame & Canvas (Landscape friendly)
