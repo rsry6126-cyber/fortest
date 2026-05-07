@@ -440,7 +440,7 @@
       // Grid Configuration
       const numCols = 5;
       const arcPadding = 24; // Degrees between columns
-      const yRowStep = 1.4;     // Vertical distance between rows
+      const yRowStep = 1.1;     // Vertical distance between rows
       const radius = 4.8;    // Distance from the viewer
 
       // Initialize Items
@@ -466,7 +466,7 @@
         
         // Calculate vertical position (Shifted to balance eye level and keep above floor)
         const rowOffset = (Math.floor(GALLERY_DATA.length / numCols) - 1) / 2;
-        const posY = (rowOffset - row) * yRowStep + 0.8; 
+        const posY = (rowOffset - row) * yRowStep + 0.1; 
         
         const entity = document.createElement('a-entity');
         entity.setAttribute('position', `${posX} ${posY} ${posZ}`);
