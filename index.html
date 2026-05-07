@@ -95,7 +95,7 @@
         AFRAME.registerComponent('maintain-perceived-size', {
           schema: { 
             baseScale: {type: 'number', default: 1},
-            referenceDistance: {type: 'number', default: 6.2} // The radius where they were designed
+            referenceDistance: {type: 'number', default: 4.0} // The radius where they were designed
           },
           tick: function () {
             const cameraEl = this.el.sceneEl.camera.el;
@@ -439,9 +439,9 @@
 
       // Grid Configuration
       const numCols = 5;
-      const arcPadding = 20; // Degrees between columns
-      const yRowStep = 1.4;     // Vertical distance between rows
-      const radius = 6.2;    // Distance from the viewer
+      const arcPadding = 24; // Degrees between columns
+      const yRowStep = 1.0;     // Vertical distance between rows
+      const radius = 4.0;    // Distance from the viewer
 
       // Initialize Items
       GALLERY_DATA.forEach((item, index) => {
@@ -466,7 +466,7 @@
         
         // Calculate vertical position (Shifted to balance eye level and keep above floor)
         const rowOffset = (Math.floor(GALLERY_DATA.length / numCols) - 1) / 2;
-        const posY = (rowOffset - row) * yRowStep + 0.8; 
+        const posY = (rowOffset - row) * yRowStep + 0.1; 
         
         const entity = document.createElement('a-entity');
         entity.setAttribute('position', `${posX} ${posY} ${posZ}`);
