@@ -426,8 +426,8 @@
 
       // Grid Configuration
       const numCols = 5;
-      const arcPadding = 24; // Degrees between columns
-      const yRowStep = 1.5;     // Vertical distance between rows
+      const arcPadding = 28; // Increased slightly to prevent horizontal crowding
+      const yRowStep = 1.1;     // Reduced to bring frames vertically closer
       const radius = 4.8;    // Distance from the viewer
 
       // Initialize Items
@@ -440,7 +440,7 @@
         img.referrerPolicy = "no-referrer";
         assets.appendChild(img);
 
-        // 2. Position Logic (3x3 Grid)
+        // 2. Position Logic
         const col = index % numCols;
         const row = Math.floor(index / numCols);
 
@@ -451,9 +451,9 @@
         let posX = Math.sin(rad) * radius;
         let posZ = -Math.cos(rad) * radius;
         
-        // Calculate vertical position (Shifted to balance eye level and keep above floor)
+        // Calculate vertical position (Adjusted to eye level and to avoid floor overlap)
         const rowOffset = (Math.floor(GALLERY_DATA.length / numCols) - 1) / 2;
-        const posY = (rowOffset - row) * yRowStep + 0.8; 
+        const posY = (rowOffset - row) * yRowStep + 1.3; 
         
         const entity = document.createElement('a-entity');
         entity.setAttribute('position', `${posX} ${posY} ${posZ}`);
